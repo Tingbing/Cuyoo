@@ -16,4 +16,4 @@ for(const file of (await readdir('drizzle')).filter(f=>f.endsWith('.sql')).sort(
 const url=await mf.ready;console.log(JSON.stringify({url:url.href,isolatedD1:true}));
 process.on('SIGTERM',async()=>{await mf.dispose();await rm(storage,{recursive:true,force:true});process.exit();});
 process.on('SIGINT',()=>process.emit('SIGTERM'));
-export {mf,url,storage};
+export {mf,db,url,storage};

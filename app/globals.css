@@ -35,3 +35,7 @@
 .point-card b{color:#526a55}
 
 :root[data-theme="dark"] .secondary{background:#2f463a;color:#e0ece6;border-color:var(--line)}
+.test-game{width:100%;margin-top:9px;min-height:40px;padding:9px 13px;display:flex;align-items:center;justify-content:space-between}.test-game span{font-size:11px}.test-game small{font-size:9px;font-weight:400;color:var(--muted)}
+.test-label{margin-left:8px;padding:4px 6px;border-radius:4px;background:var(--secondary);color:var(--ink);letter-spacing:1px}
+.seat.bot .avatar{font-size:13px;color:#8b6e33}
+@media(max-width:620px){.test-game{min-height:42px}.test-label{display:inline-block;margin:5px 0 0}}
