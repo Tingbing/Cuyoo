@@ -1,6 +1,6 @@
 # Cuyoo implementation checkpoint
 
-Canonical repository: https://github.com/Tingbing/Cuyoo. Branch: `codex/cuyoo-multiplayer`. PR: https://github.com/Tingbing/Cuyoo/pull/1 (draft pending final browser QA). Original repo was empty; main contains only initialization README commit e018f92bc170aa2f8c7bc26664037327896900a5. No unrelated code or Wiffle/Supabase data was used.
+Canonical repository: https://github.com/Tingbing/Cuyoo. Branch: `codex/cuyoo-multiplayer`. PR: https://github.com/Tingbing/Cuyoo/pull/1 (validated; final review-ready update accompanies this checkpoint). Original repo was empty; main contains only initialization README commit e018f92bc170aa2f8c7bc26664037327896900a5. No unrelated code or Wiffle/Supabase data was used.
 
 ## Implemented
 
@@ -25,12 +25,25 @@ Actual live HTTPS backend checks completed with independent anonymous cookie jar
 
 API synthetic room IDs: 04d1a94a-3afa-4b8e-a211-aa2a812405e6 and 2b16933f-86f2-435c-8ff4-29830d69efec. Old abandoned synthetic lobby: eaa59c6d-7273-4338-a911-354e643742ee. They use normal retention; no privileged deletion endpoint was added. No private payloads/cookies are saved in reports.
 
-Actual cloud desktop browser verified lobby/create/seats/teams/incomplete manual start/reload/same-device second-tab read-only/leave. Its single-cookie profile cannot prove independent players. A separate fresh Chromium 153 browser with Playwright 1.62.1 is now running `tests/browser-check.mjs` against the real deployed app using four/six isolated BrowserContexts. Required full UI matches, phone layouts, motion, refreshed roles, count replay, network loss and rematches remain in progress; no readiness claim before passing.
+Actual independent browser QA is complete. Fresh Playwright 1.62.1 / Chromium 153.0.8010.0 cookie-isolated contexts completed both modes on the real HTTPS backend:
 
-The browser run found a startup race: typing before session bootstrap could be overwritten. Username input is now disabled until bootstrap completes. Further browser findings will be recorded in `docs/VALIDATION.md` and aggregate secret-free evidence under `docs/browser-evidence/`.
+| Browser players | Hands | UI card plays | Final score | Seconds incl. outages/retries | Rematch |
+| --- | ---: | ---: | --- | ---: | --- |
+| 4 | 10 | 160 | A -4, B 7 | 587 | Reset, dealer 0 then 2 |
+| 6 | 13 | 312 | A -1, B 7 | 1014 | Reset, dealer 3 then 3 |
+
+Both passed shared lobby/manual host start/full room, distinct cookies, participant-only/private views, same-device viewer tab, cutter-only touch/keyboard slider, exact UI trump/legal plays, consistent scores, refreshed cutter/caller/current/non-current/collect/count, temporary actor and 22-second host offline periods, replay-safe delayed response, all presentation phases, 320/390px overflow and card/label spacing checks, reduced motion and zero uncaught app errors. A fresh random dealer can equal the previous seat. Waiting host transfer and an empty lobby's new host passed in separate real browser sessions; all seats left that test lobby.
+
+Final presentation refinements were verified in additional real four/six-context one-hand browser fixtures. All 16/24 captured cards and actual totals/deltas rendered correctly: 0:24 with no-caller fallback, and 31:9 with a winning caller. Final code uses direction-based card travel, shorter count staggering and subtle win feedback. Source lint/type/build pass. Actual cloud desktop no-account lobby/reload/viewer/leave inspection is supplementary.
+
+Browser findings fixed: name entry is disabled until session bootstrap to avoid overwritten early typing; narrow phone played-card labels/positions no longer overlap; requests have a 10-second timeout, with same-ID retries reconciling accepted actions. Test GET observations are bounded and stale UI-version responses trigger resynchronization. Synthetic fixtures use normal retention; no privileged delete/raw-state endpoint or private-cookie/payload report was added.
+
+Evidence: `docs/VALIDATION.md`, `docs/browser-evidence/results.json`, `docs/browser-evidence/lobby-result.json`, and `docs/visual-final/results.json`. Selected images show finalized public counts/completed matches. No known functional blocker remains. These are actual Chromium viewport/touch checks; physical-phone/Safari/FPS benchmarking was not performed.
 
 ## Hosting and review
 
-Working HTTPS: https://cuyoo-table.warm-ghost-4468.chatgpt.site/ (public by username-only friend-play requirements). Dedicated D1 migrations are deployed. Latest current version 5: appgprj_6acaf74b5fcc8191903fb83f348ad81d~appgver_cd89a596e6ac8191bcc29e519c16a511; deployment appgdep_6acb085b1cb481918e5d13d37336538e succeeded; source mirror commit 30089724334a574de7b0e1d8398cb3fbd35159d9. Site project identity: `.openai/hosting.json`; preserve it. No paid upgrades were enabled. Canonical GitHub head currently dcfb6c699804f2fcaa83474d9689e6acd77f0405; final event/card/browser-test updates await the next isolated implementation commit. Do not merge main during QA.
+Working HTTPS: https://cuyoo-table.warm-ghost-4468.chatgpt.site/ (public by username-only friend-play requirements). Dedicated D1 migrations are deployed. Verified runtime version 7: appgprj_6acaf74b5fcc8191903fb83f348ad81d~appgver_de9cd494efcc8191a81a689d6fa526c3; deployment appgdep_6acb0d59ee1881919b9fc6d082361d6f succeeded; source mirror application commit 4d70256968708b78c795e8bc8cca60deb03b0e6b. Final documentation/evidence publication reuses this unchanged checked application bundle. Native live overview reconfirmed project identity and binding DB with only rooms/sessions user tables. Preserve `.openai/hosting.json`; no unrelated backend or paid upgrade was used.
 
-Read `docs/DEPLOYMENT.md` for installation, local database migrations, browser runner, publication, rollback and restart recovery. Remaining: finish independent-browser checks/fixes, retain evidence, final GitHub commit/PR update and matching Site source publication, recheck repository and backend targets, and deliver verified links and concise playing instructions.
+Review: https://github.com/Tingbing/Cuyoo/pull/1. Implementation history includes initial commit 99f7983afb6664fcece5c05127ed69c2fd2be0c5 and f8cbb4275d9db0cafa8cc05140fb19c0c8f264e7; the final evidence/refinement commit accompanies this checkpoint on the same isolated branch. Main remains initialization-only; the implementation has not been merged. Final source, evidence and PR status are verified during handoff.
+
+Read `docs/DEPLOYMENT.md` for installation, immutable database migrations, real backend/browser runners, exact publication ordering and rollback/restart recovery. There are no outstanding implementation or required validation items. The two explicitly labeled house-rule defaults above remain easy to change if the group later confirms alternatives.

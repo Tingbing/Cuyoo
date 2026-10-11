@@ -19,12 +19,13 @@ if(process.env.HTTPS_PROXY){const u=new URL(process.env.HTTPS_PROXY);launch.prox
 const browser=await chromium.launch(launch);
 const sleep=ms=>new Promise(r=>setTimeout(r,ms));
 const reports=[];
-async function read(page,id){return page.evaluate(async room=>{const r=await fetch(`/api/rooms/${room}`,{headers:{'X-Client-Tab':sessionStorage.getItem('cuyoo-tab')},cache:'no-store'});if(!r.ok)throw new Error(`Read failed: ${r.status}`);return r.json();},id);}
+async function read(page,id){for(let attempt=0;attempt<3;attempt++){try{return await page.evaluate(async room=>{const r=await fetch(`/api/rooms/${room}`,{headers:{'X-Client-Tab':sessionStorage.getItem('cuyoo-tab')},cache:'no-store',signal:AbortSignal.timeout(12000)});if(!r.ok)throw new Error(`Read failed: ${r.status}`);return r.json();},id);}catch(e){if(attempt===2||/Read failed: (401|403|404)/.test(e.message))throw e;await sleep(700);}}}
+function sameHand(a,b){assert(a.length===b.length&&a.every((c,i)=>c===b[i]),'Private hand changed unexpectedly.');}
 function privateView(g,n){for(const key of ['deck','hands','fallback','host','receipts','sessions'])assert(!(key in g),`Private key ${key} leaked`);assert.equal(g.seats.length,n);assert(!g.seats.some(s=>'id'in s));assert(g.hand.length<=4);}
 async function noOverflow(p){const dims=await p.evaluate(()=>({width:innerWidth,scroll:document.documentElement.scrollWidth}));assert(dims.scroll<=dims.width+1,`Horizontal overflow: ${JSON.stringify(dims)}`);}
-async function shot(p,n,phase){await p.screenshot({path:resolve(out,`${n}-${phase}.png`),fullPage:true});}
-async function click(p,button){await button.waitFor({state:'visible',timeout:15000});await button.click({timeout:15000});}
-async function act(p,button){const response=p.waitForResponse(r=>r.url().endsWith('/action')&&r.request().method()==='POST');response.catch(()=>{});await click(p,button);const r=await response;assert(r.ok(),`Browser action rejected: ${r.status()}`);return r.json();}
+async function shot(p,n,phase){await p.screenshot({path:resolve(out,`${n}-${phase}.png`),fullPage:true,animations:phase.includes('count')||phase.includes('trick')?'disabled':'allow'});}
+async function click(p,button){await button.waitFor({state:'visible',timeout:45000});await button.click({timeout:45000});}
+async function act(p,button){for(let attempt=0;attempt<3;attempt++){const response=p.waitForResponse(r=>r.url().endsWith('/action')&&r.request().method()==='POST',{timeout:60000});response.catch(()=>{});try{await click(p,button);}catch(e){const state=await p.evaluate(()=>({status:document.querySelector('.turn-status')?.textContent,notices:[...document.querySelectorAll('.notice')].map(x=>x.textContent),phase:document.querySelector('.board')?.className,cards:document.querySelectorAll('.hand-card').length,legal:document.querySelectorAll('.hand-card.legal').length,enabled:document.querySelectorAll('.hand-card:enabled').length}));console.error('CONTROL DIAGNOSTIC',JSON.stringify(state));await p.screenshot({path:resolve(out,'control-failure.png'),fullPage:true});throw e;}const r=await response;const data=await r.json();if(r.status()===409&&data.resync){await sleep(1000);continue;}assert(r.ok(),`Browser action rejected: ${r.status()} ${data.error||''}`);return data;}throw new Error('UI did not resynchronize.');}
 async function match(n){
  const started=Date.now(),tag=crypto.randomUUID().slice(0,6),title=`QA-Browser-${n}-${tag}`,contexts=[],pages=[],errors=[],phases=new Set(),flags=new Set(),visuals=Array.from({length:n},()=>new Set());
  let roomId,plays=0,moves=0;
@@ -64,9 +65,10 @@ async function match(n){
   g=await read(pages[0],roomId);privateView(g,n);phases.add(g.phase);
   for(let i=0;i<n;i++)for(const phase of await pages[i].evaluate(()=>window.__qaPhases||[]))visuals[i].add(phase.replace('phase-',''));
   if(g.phase==='complete')break;
+  if(process.env.CUYOO_VISUAL_ONLY==='1'&&g.phase==='count'){await pages[1].locator('.board.phase-count').waitFor();await noOverflow(pages[1]);await shot(pages[1],n,'actual-mobile-count');for(let team=0;team<2;team++)assert.equal(await pages[1].locator('.count-row strong').nth(team).textContent(),`${g.count[team]} card points`);const counts=await pages[1].locator('.point-card').count();assert.equal(counts,n*4);const summary={players:n,roomId,visualOnly:true,counts:g.count,delta:g.delta,countCards:counts,verified:true};reports.push(summary);await writeFile(resolve(out,`visual-result-${n}.json`),JSON.stringify(summary,null,2)+'\n');console.log(JSON.stringify(summary));for(const c of contexts)await c.close();return;}
   if(g.phase==='shuffle'||g.phase==='deal'){await sleep(200);continue;}
   if(g.phase==='collect'||g.phase==='count'){
-   if(!flags.has(g.phase)){flags.add(g.phase);await shot(pages[1],n,`mobile-${g.phase}`);await pages[0].reload();assert.equal((await read(pages[0],roomId)).matchId,firstMatch);if(g.phase==='count'){const after=await read(pages[0],roomId);assert.equal(after.history.filter(h=>h.handId===g.handId).length,1);}}
+   if(!flags.has(g.phase)){flags.add(g.phase);await pages[1].locator(`.board.phase-${g.phase}`).waitFor();if(g.phase==='count'){await noOverflow(pages[1]);for(let team=0;team<2;team++)assert.equal(await pages[1].locator('.count-row strong').nth(team).textContent(),`${g.count[team]} card points`);assert.equal(await pages[1].locator('.point-card').count(),n*4);}await shot(pages[1],n,`mobile-${g.phase}`);await pages[0].reload();assert.equal((await read(pages[0],roomId)).matchId,firstMatch);if(g.phase==='count'){const after=await read(pages[0],roomId);assert.equal(after.history.filter(h=>h.handId===g.handId).length,1);}}
    await sleep(200);continue;
   }
   const p=pages[g.actor];assert(p,'No acting browser');
@@ -79,22 +81,28 @@ async function match(n){
    }
    await act(p,p.getByRole('button',{name:g.history.length%2?/Leave deck as-is/:/Confirm cut/}));moves++;
   }else if(g.phase==='trump1'||g.phase==='trump2'){
-   if(!flags.has('trump-decision')){flags.add('trump-decision');const prior=await read(p,roomId);await p.reload();assert.deepEqual((await read(p,roomId)).hand,prior.hand);}
+   if(!flags.has('trump-decision')){flags.add('trump-decision');const prior=await read(p,roomId);await p.reload();sameHand((await read(p,roomId)).hand,prior.hand);}
    // Exercise four-player automatic fallback and six-player second round on hand one.
    const pass=(g.history.length===0&&g.phase==='trump1')||g.actor%2===1;
-   await act(p,p.getByRole('button',{name:pass?'Pass':/^.*Play (clubs|diamonds|hearts|spades)$/}).first());moves++;if(!pass&&!flags.has('caller')){flags.add('caller');const before=await read(p,roomId);assert.equal(before.caller,g.actor);await p.reload();assert.deepEqual((await read(p,roomId)).hand,before.hand);}
+   await act(p,p.getByRole('button',{name:pass?'Pass':/^.*Play (clubs|diamonds|hearts|spades)$/}).first());moves++;if(!pass&&!flags.has('caller')){flags.add('caller');const before=await read(p,roomId);assert.equal(before.caller,g.actor);await p.reload();sameHand((await read(p,roomId)).hand,before.hand);}
   }else if(g.phase==='play'){
-   if(!flags.has('play')){
-    flags.add('play');const before=await read(p,roomId);await p.reload();const after=await read(p,roomId);assert.deepEqual(after.hand,before.hand);assert.equal(after.mySeat,before.mySeat);
-    const other=pages[(g.actor+1)%n];const prior=await read(other,roomId);await other.reload();assert.deepEqual((await read(other,roomId)).hand,prior.hand);
+   if(!flags.has('play')&&process.env.CUYOO_VISUAL_ONLY!=='1'){
+    flags.add('play');const before=await read(p,roomId);await p.reload();const after=await read(p,roomId);sameHand(after.hand,before.hand);assert.equal(after.mySeat,before.mySeat);
+    const other=pages[(g.actor+1)%n];const prior=await read(other,roomId);await other.reload();sameHand((await read(other,roomId)).hand,prior.hand);
     await noOverflow(pages[1]);await pages[1].setViewportSize({width:320,height:700});await noOverflow(pages[1]);await shot(pages[1],n,'mobile-play-320');await pages[1].setViewportSize({width:390,height:844});
     // Offline active actor keeps seat/hand and announces reconnection; no AI move.
-    await contexts[g.actor].setOffline(true);await p.getByText('Reconnecting…',{exact:false}).waitFor({timeout:10000});await sleep(1100);await contexts[g.actor].setOffline(false);await p.getByText('Reconnecting…',{exact:false}).waitFor({state:'hidden',timeout:10000});const recovered=await read(p,roomId);assert.deepEqual(recovered.hand,before.hand);assert.deepEqual(recovered.scores,before.scores);assert.equal(recovered.actor,g.actor);
+    await contexts[g.actor].setOffline(true);await p.getByText('Reconnecting…',{exact:false}).waitFor({timeout:10000});await sleep(1100);await contexts[g.actor].setOffline(false);await p.getByText('Reconnecting…',{exact:false}).waitFor({state:'hidden',timeout:10000});const recovered=await read(p,roomId);sameHand(recovered.hand,before.hand);assert.deepEqual(recovered.scores,before.scores);assert.equal(recovered.actor,g.actor);
     // Explicit host loss is presence-only and cannot appoint a replacement.
     await contexts[0].setOffline(true);await sleep(22000);const hostAway=await read(pages[1],roomId);assert.equal(hostAway.seats[0].connected,false);assert(hostAway.seats[0].host);assert.equal(hostAway.seats.length,n);await contexts[0].setOffline(false);await pages[0].getByText('Reconnecting…',{exact:false}).waitFor({state:'hidden',timeout:10000});assert.equal((await read(pages[0],roomId)).mySeat,0);
     await shot(pages[0],n,'desktop-play');
    }
-   await act(p,p.locator('.hand-card.legal:enabled').first());plays++;moves++;
+   if(g.trick.length===n-1&&!flags.has('spacing')){flags.add('spacing');await sleep(350);const phone=pages[1];await phone.setViewportSize({width:320,height:700});await noOverflow(phone);const bounds=await phone.locator('.played').evaluateAll(nodes=>nodes.map(e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,w:r.width,h:r.height};}));for(let i=0;i<bounds.length;i++)for(let j=i+1;j<bounds.length;j++){const a=bounds[i],b=bounds[j],dx=Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x),dy=Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y);assert(!(dx>2&&dy>2),`Played cards/labels overlap on phone: ${dx} by ${dy}`);}await shot(phone,n,'mobile-trick-320');await phone.setViewportSize({width:390,height:844});}
+   if(!flags.has('retry')&&process.env.CUYOO_VISUAL_ONLY!=='1'){
+    flags.add('retry');let first=true;const actionIds=[];const before=await read(p,roomId);
+    await p.route('**/api/rooms/*/action',async route=>{const body=route.request().postDataJSON();actionIds.push(body.actionId);const response=await route.fetch();if(first){first=false;await sleep(12000);}try{await route.fulfill({response});}catch{/* The original timed-out browser request is intentionally gone. */}});
+    await act(p,p.locator('.hand-card.legal:enabled').first());await p.unroute('**/api/rooms/*/action');
+    const after=await read(p,roomId);assert.equal(after.hand.length,before.hand.length-1);assert.equal(after.trick.length,before.trick.length+1);assert(actionIds.length>=2);assert.equal(new Set(actionIds).size,1,'Lost-response retry must reuse the intention ID');
+   }else await act(p,p.locator('.hand-card.legal:enabled').first());plays++;moves++;
   }else throw new Error(`Unexpected phase ${g.phase}`);
   if(moves%40===0)console.log(JSON.stringify({browserMatch:n,plays,hands:g.history.length,scores:g.scores,status:'playing'}));
   // Read-only observation checks after real DOM interactions, avoiding stale UI actions.

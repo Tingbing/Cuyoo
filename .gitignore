@@ -57,3 +57,13 @@ next-env.d.ts
 
 # Generated TypeScript incremental state
 *.tsbuildinfo
+
+# QA captures can contain in-progress hands; retain finalized public evidence only.
+docs/browser-evidence/*.png
+!docs/browser-evidence/4-complete.png
+!docs/browser-evidence/6-complete.png
+!docs/browser-evidence/host-transfer.png
+docs/visual-final/*.png
+!docs/visual-final/4-actual-mobile-count.png
+!docs/visual-final/6-actual-mobile-count.png
+docs/visual-evidence/
