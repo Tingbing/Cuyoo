@@ -40,6 +40,17 @@ export async function handle(request,env,ctx){let extra={};try{
  else if(input.name!==undefined){need(!session.active_room,'Leave your table before changing your username.');const next=name(input.name);await db.prepare('UPDATE sessions SET name=? WHERE id=? AND active_room IS NULL').bind(next,session.id).run();session.name=next;}
  return reply({name:session.name,roomId:session.active_room},200,extra);}
  need(session,'Your device session expired. Reload to reconnect.',401);
+ // Deal snapshots must not wait behind the generic lobby/action bookkeeping.
+ // Reconcile and authorize the current occupant before projecting private cards.
+ const reading=path.match(/^\/api\/rooms\/([a-f0-9-]{36})$/);
+ if(request.method==='GET'&&reading){
+ const id=reading[1];need(session.active_room===id,'Only seated players can access this table.',403);
+ const g=await load(db,id,now);need(g.seats.some(s=>s.id===session.id),'Only seated players can access this table.',403);
+ const renew=[];if(session.seen<now-2000)renew.push(db.prepare('UPDATE sessions SET seen=? WHERE id=? AND active_room=?').bind(now,session.id,id));
+ if(session.controller===null||session.controller!==tab||session.lease<now-5000)renew.push(db.prepare('UPDATE sessions SET controller=?,lease=? WHERE id=? AND active_room=? AND (controller=? OR lease<? OR controller IS NULL) RETURNING controller').bind(tab,now,session.id,id,tab,now-15000));
+ if(renew.length){const results=await db.batch(renew);const controller=results.flatMap(r=>r.results??[]).find(r=>r.controller);if(controller)session.controller=controller.controller;}
+ const currentTime=Date.now(),isOnline=await online(db,g,currentTime);
+ return reply({...view(g,session.id,isOnline,currentTime),readOnly:session.controller!==tab,serverTime:currentTime});}
  if(session.active_room)await load(db,session.active_room,now);
  session=await db.prepare('SELECT * FROM sessions WHERE id=?').bind(session.id).first();
  if(presence){need(request.method==='GET'&&session.active_room,'No active seat.',403);return presenceSocket(db,session,tab,request,ctx);}
