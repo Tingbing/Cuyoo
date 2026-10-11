@@ -1,5 +1,6 @@
 [
   {
+    "backend": "isolated-local-https",
     "players": 4,
     "independentContexts": 6,
     "cardPlays": 16,
@@ -14,9 +15,10 @@
     "swipeAndKeyboard": true,
     "privacy": true,
     "zeroPageErrors": true,
-    "seconds": 66
+    "seconds": 68
   },
   {
+    "backend": "isolated-local-https",
     "players": 6,
     "independentContexts": 8,
     "cardPlays": 24,
@@ -31,6 +33,6 @@
     "swipeAndKeyboard": true,
     "privacy": true,
     "zeroPageErrors": true,
-    "seconds": 73
+    "seconds": 77
   }
 ]
