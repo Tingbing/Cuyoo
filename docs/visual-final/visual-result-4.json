@@ -1,0 +1,15 @@
+{
+  "players": 4,
+  "roomId": "e2856e38-6771-4879-98ce-2089dc2c56e7",
+  "visualOnly": true,
+  "counts": [
+    0,
+    24
+  ],
+  "delta": [
+    0,
+    1
+  ],
+  "countCards": 16,
+  "verified": true
+}

@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1791686528688,
+      "tag": "0000_flawless_havok",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1791741301307,
+      "tag": "0001_occupancy_review_v2",
+      "breakpoints": true
+    }
+  ]
+}

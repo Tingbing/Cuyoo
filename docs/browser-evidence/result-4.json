@@ -1,0 +1,78 @@
+{
+  "players": 4,
+  "roomId": "d832f55b-24bf-426a-a955-3d388c1ed890",
+  "independentContexts": 4,
+  "plays": 160,
+  "hands": 10,
+  "scores": [
+    -4,
+    7
+  ],
+  "seconds": 587,
+  "firstDealer": 0,
+  "rematchDealer": 2,
+  "rematchReset": true,
+  "refreshPhases": [
+    "cut",
+    "trump-decision",
+    "play",
+    "retry",
+    "spacing",
+    "collect",
+    "count",
+    "caller"
+  ],
+  "renderedPhases": [
+    [
+      "waiting",
+      "cut",
+      "shuffle",
+      "trump1",
+      "deal",
+      "play",
+      "collect",
+      "count",
+      "complete"
+    ],
+    [
+      "waiting",
+      "cut",
+      "shuffle",
+      "trump1",
+      "deal",
+      "play",
+      "collect",
+      "count",
+      "complete"
+    ],
+    [
+      "waiting",
+      "cut",
+      "shuffle",
+      "deal",
+      "trump1",
+      "play",
+      "collect",
+      "count",
+      "complete"
+    ],
+    [
+      "waiting",
+      "cut",
+      "deal",
+      "trump1",
+      "play",
+      "collect",
+      "count",
+      "shuffle",
+      "complete"
+    ]
+  ],
+  "phoneWidths": [
+    320,
+    390
+  ],
+  "uncaughtErrors": 0,
+  "reducedMotionSeat": 3,
+  "verified": true
+}

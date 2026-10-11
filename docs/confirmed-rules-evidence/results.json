@@ -1,0 +1,36 @@
+[
+  {
+    "players": 4,
+    "independentContexts": 6,
+    "cardPlays": 16,
+    "allPass": true,
+    "packetSteps": true,
+    "reducedMotion": true,
+    "newDeviceReplacement": true,
+    "expiredSeatReplacement": true,
+    "hostFiveSecondGate": true,
+    "reviewReload": true,
+    "themePersistence": true,
+    "swipeAndKeyboard": true,
+    "privacy": true,
+    "zeroPageErrors": true,
+    "seconds": 66
+  },
+  {
+    "players": 6,
+    "independentContexts": 8,
+    "cardPlays": 24,
+    "allPass": true,
+    "packetSteps": true,
+    "reducedMotion": true,
+    "newDeviceReplacement": true,
+    "expiredSeatReplacement": true,
+    "hostFiveSecondGate": true,
+    "reviewReload": true,
+    "themePersistence": true,
+    "swipeAndKeyboard": true,
+    "privacy": true,
+    "zeroPageErrors": true,
+    "seconds": 73
+  }
+]

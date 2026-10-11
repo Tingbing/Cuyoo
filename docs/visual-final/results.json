@@ -1,0 +1,37 @@
+{
+  "url": "https://cuyoo-table.warm-ghost-4468.chatgpt.site/",
+  "at": "2026-10-11T04:22:40.617Z",
+  "browserVersion": "153.0.8010.0",
+  "reports": [
+    {
+      "players": 4,
+      "roomId": "e2856e38-6771-4879-98ce-2089dc2c56e7",
+      "visualOnly": true,
+      "counts": [
+        0,
+        24
+      ],
+      "delta": [
+        0,
+        1
+      ],
+      "countCards": 16,
+      "verified": true
+    },
+    {
+      "players": 6,
+      "roomId": "d994ddb6-9bb3-4986-9ea4-e8aba5482e1e",
+      "visualOnly": true,
+      "counts": [
+        31,
+        9
+      ],
+      "delta": [
+        1,
+        0
+      ],
+      "countCards": 24,
+      "verified": true
+    }
+  ]
+}
