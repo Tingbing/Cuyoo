@@ -21,6 +21,8 @@ node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1
 4. `npm run test` runs independent rules fixtures and real Miniflare/Workers D1 integration tests. Integration uses synthetic anonymous sessions and a temporary persistent D1 store; only test timestamps are advanced through the administrator D1 binding. No such clock-advance endpoint exists in production.
 5. `tests/https-check.mjs <URL>` runs independent device sessions against the deployed backend without privileged access. Synthetic table names identify the test. The script intentionally uses actual server transition times and must heartbeat every participant.
 
+6. `pnpm exec playwright install chromium` installs the browser required for `CUYOO_URL=https://your-isolated-test-site npm run test:browser`. The runner creates four and six separate cookie-isolated contexts and drives real UI actions through complete matches. It writes only synthetic screenshots and aggregate results under `docs/browser-evidence/`; it does not serialize cookies or private network snapshots. Optional `CUYOO_CHROMIUM` selects an existing Chromium executable and `PLAYWRIGHT_MODULE` selects a runtime-supplied Playwright module. In a managed intercepting proxy, `CUYOO_PROXY_INSECURE=1` permits that proxy's certificate in the test browser only. No such bypass is present in app code. Never run on another group's real rooms.
+
 Browser UI coverage is a separate requirement from API sessions. Neither pure rules tests nor independent API sessions claim to be independent browser contexts or proof of mobile animation performance.
 
 ## State and consistency

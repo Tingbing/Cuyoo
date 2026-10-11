@@ -13,7 +13,6 @@ async function request(c,path,body,expected=200){const res=await mf.dispatchFetc
 async function register(name){const c=client();await request(c,'session',{name});return c;}
 async function move(c,id,type,payload={},expected=200,snapshot=null){const g=snapshot??await request(c,'rooms/'+id);return request(c,`rooms/${id}/action`,{type,version:g.version,matchId:g.matchId,handId:g.handId,actionId:crypto.randomUUID(),...payload},expected);}
 async function fastForward(id){await db.prepare('UPDATE rooms SET state=json_set(state,\'$.deadline\',1) WHERE id=?').bind(id).run();}
-async function hearts(c,id){const g=await request(c,'rooms/'+id);return g;}
 async function fixture(n){const clients=await Promise.all(Array.from({length:n},(_,i)=>register(`P${n}-${i}`)));const {roomId:id}=await request(clients[0],'rooms',{name:`Synthetic-${n}-${crypto.randomUUID().slice(0,6)}`,capacity:n});for(const c of clients.slice(1))await request(c,`rooms/${id}/join`,{});return {id,clients};}
 test('D1 authorization, atomic races, leases, restart recovery and full independent-session matches',{timeout:180000},async t=>{
  const result=await build({entryPoints:['game/server.mjs'],bundle:true,format:'esm',write:false,platform:'browser'});bundle=result.outputFiles[0].text;storage=await mkdtemp(join(tmpdir(),'cuyoo-d1-'));
