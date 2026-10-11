@@ -6,7 +6,7 @@ Initial dealer is securely random only at match/rematch start. Cutter is right o
 
 ## Cards, cut, and packets
 
-The 24-card deck contains 9, 10, J, Q, K, A in four suits. Shuffle is cryptographic Fisher–Yates; cutting rotates at a whole gap 1–23. Deal two cards clockwise to each seat, then two more clockwise, preserving actual allocation order. Each 360ms packet has a server delivery time after a brief 600ms table synchronization prelude. Private projections expose zero, two, then four own cards. Other hands and unused deck stay private. Reduced motion preserves the same timings/order.
+The 24-card deck contains 9, 10, J, Q, K, A in four suits. Shuffle is cryptographic Fisher–Yates; cutting rotates at a whole gap 1–23. Deal two cards clockwise to each seat, then two more clockwise, preserving actual allocation order. Each 360ms packet has a server delivery time after a brief 1200ms table synchronization prelude. Private projections expose zero, two, then four own cards. Other hands and unused deck stay private. Reduced motion preserves the same timings/order.
 
 Four players receive 16 cards. First unused card proposes trump. After all four pass, the next unused card proposes trump in another complete clockwise round, even if its suit is the same. After both rounds pass, advance dealer, reshuffle and cut a new hand; no automatic caller/trump.
 
