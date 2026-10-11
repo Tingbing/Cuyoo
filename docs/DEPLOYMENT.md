@@ -8,6 +8,14 @@ Use Node 22.13+ and the version of pnpm pinned in package.json. `bash scripts/in
 
 `.openai/hosting.json` contains the Site identity and logical `DB` D1 binding. Sites provisions the dedicated binding and applies the versioned `drizzle/` migrations before uploading the Worker. Runtime schema creation is prohibited. For standalone Cloudflare use, bind your own free-plan D1 database to `DB` and configure its real database ID in Wrangler; the starter ID is only for local emulation, never a live database target.
 
+## Solo test rooms and bot recovery
+
+Solo mode needs no schema migration, new service, secret or paid resource. It stores its mode, synthetic bot occupants and pending bot schedule inside the existing versioned room JSON. The room ID is derived privately from the authenticated device session, so duplicate tabs/retries converge on one owned test room without making that identifier guessable from public data.
+
+The browser never drives a bot or receives a bot credential. An owner-authorized request loads the room, reconciles due server time, selects one random action from the engine's legal set and commits it through the same optimistic room mutation used by human play. A pending bot turn records its identity and 400–800ms due time before execution. Restarts, reloads and concurrent requests therefore resume it safely instead of losing or duplicating a move. Scheduling pauses whenever the human must act, while the human reviews a completed hand, or when the room is no longer playable.
+
+Test rooms are excluded from lobby queries and reject join attempts. The human's normal reconnect grace remains available; expiry marks the test room abandoned and prevents further bot scheduling. Explicit Leave deletes the owned room and session membership in one transaction. Opportunistic cleanup removes abandoned test rooms after one hour. Ordinary rooms retain their existing 24-hour/seven-day retention rules.
+
 ## Local D1 and verification
 
 1. Install, then generate changes with `npm run db:generate` after editing `db/schema.ts`.
@@ -21,7 +29,7 @@ node --import ./scripts/sites-env.mjs ./node_modules/wrangler/bin/wrangler.js d1
 4. `npm run test` runs independent rules fixtures and real Miniflare/Workers D1 integration tests. Integration uses synthetic anonymous sessions and a temporary persistent D1 store; only test timestamps are advanced through the administrator D1 binding. No such clock-advance endpoint exists in production.
 5. `tests/https-check.mjs <URL>` runs independent device sessions against the deployed backend without privileged access. Synthetic table names identify the test. The script intentionally uses actual server transition times and must heartbeat every participant.
 
-6. Use the existing Chromium executable with `CUYOO_CHROMIUM=/path/to/chromium npm run test:browser` after building. The v2 runner creates four/six independent contexts plus fresh replacement devices on the isolated local HTTPS Worker/D1 backend and writes aggregate evidence to `outputs/new-browser/`. Only inspected public completed-count screenshots/results are committed. It accepts its local test certificate only and removes synthetic D1 after completion. `tests/browser-check.mjs` is a compatibility entry point to this runner. `tests/lobby-browser-check.mjs` remains a separately invoked live waiting-lobby smoke check; it never selects other groups' rooms.
+6. Use the existing Chromium executable with `CUYOO_CHROMIUM=/path/to/chromium npm run test:browser` after building. The v2 runner creates four/six independent contexts plus fresh replacement devices on the isolated local HTTPS Worker/D1 backend and writes aggregate evidence to `outputs/new-browser/`. `CUYOO_CHROMIUM=/path/to/chromium npm run test:solo-browser` runs complete four/six single-human bot matches through rematch and leave, including reload and reconnect recovery, writing disposable evidence to `outputs/solo-browser/`. Only inspected public screenshots/results should be retained; private cookies and hands must not be published. Both runners accept their local test certificate only and remove synthetic D1 after completion. `tests/browser-check.mjs` is a compatibility entry point to the multiplayer runner. `tests/lobby-browser-check.mjs` remains a separately invoked live waiting-lobby smoke check; it never selects other groups' rooms.
 
 Browser UI coverage is a separate requirement from API sessions. Neither pure rules tests nor independent API sessions claim to be independent browser contexts or proof of mobile animation performance.
 

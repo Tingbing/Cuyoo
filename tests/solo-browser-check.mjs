@@ -1,0 +1,43 @@
+/** Browser validation of the real production Worker/assets with one human and server bots. */
+import assert from 'node:assert/strict';
+import {chromium} from 'playwright';
+import {mkdir,rm,writeFile} from 'node:fs/promises';
+import * as fixture from './preview-backend.mjs';
+
+const executablePath=process.env.CUYOO_CHROMIUM;
+assert(executablePath,'Set CUYOO_CHROMIUM to a Chromium executable.');
+const browser=await chromium.launch({executablePath,args:['--no-sandbox','--ignore-certificate-errors']});
+const out='outputs/solo-browser';
+await mkdir(out,{recursive:true});
+const reports=[];
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+
+async function read(page,id){return page.evaluate(async roomId=>{const response=await fetch('/api/rooms/'+roomId,{headers:{'X-Client-Tab':sessionStorage.getItem('cuyoo-tab')}});if(!response.ok)throw new Error(`room read ${response.status}`);return response.json();},id);}
+async function waitState(page,id,predicate,label){for(let i=0;i<200;i++){const game=await read(page,id);if(predicate(game))return game;await sleep(100);}throw new Error(`Timed out waiting for ${label}`);}
+async function action(page,locator){for(let attempt=0;attempt<5;attempt++){await locator.waitFor({state:'visible',timeout:15000});const pending=page.waitForResponse(response=>response.url().endsWith('/action')&&response.request().method()==='POST');await locator.click();const response=await pending;if(response.ok())return;if(response.status()!==409)throw new Error(`action ${response.status()}`);await sleep(500);}throw new Error('Action stayed stale.');}
+async function setState(id,path,value){await fixture.db.prepare(`UPDATE rooms SET state=json_set(state, '${path}', ?) WHERE id=?`).bind(value,id).run();}
+
+async function run(players){
+ const started=Date.now(),mobile=players===6,context=await browser.newContext({ignoreHTTPSErrors:true,viewport:mobile?{width:390,height:844}:{width:1280,height:800},hasTouch:mobile});
+ const page=await context.newPage(),errors=[];page.on('pageerror',error=>errors.push(error.message));
+ await page.addInitScript(()=>{window.__solo={dealCounts:[],botFlights:0};new MutationObserver(()=>{const board=document.querySelector('.board');if(!board)return;if(board.classList.contains('phase-deal')){const count=document.querySelectorAll('.hand-card').length;if(window.__solo.dealCounts.at(-1)!==count)window.__solo.dealCounts.push(count);}for(const card of document.querySelectorAll('.played'))if(!card.dataset.seen){card.dataset.seen='1';const name=card.querySelector(':scope > span:not(.face)')?.textContent||'';if(name.startsWith('Bot '))window.__solo.botFlights++;}}).observe(document,{subtree:true,childList:true,attributes:true});});
+ await page.goto(fixture.url.href,{waitUntil:'domcontentloaded'});await page.locator('#username:enabled').fill(`Solo Browser ${players}`);if(players===6){await page.getByRole('button',{name:'Dark theme'}).click();assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');}
+ await page.getByRole('button',{name:new RegExp(`${players} players`)}).click();const creation=page.waitForResponse(response=>response.url().endsWith('/api/test-rooms')&&response.request().method()==='POST');await page.getByRole('button',{name:/Test game/}).click();const id=(await(await creation).json()).roomId;await page.locator('.game-shell').waitFor();
+ let game=await read(page,id);assert.equal(game.mode,'test');assert.equal(game.isHost,true);assert.equal(game.phase,'waiting');assert.equal(game.seats.filter(seat=>seat.bot).length,players-1);assert.ok(game.seats.slice(1).every(seat=>seat.connected));assert.equal(await page.locator('.test-label').textContent(),'TEST GAME · BOTS');assert.equal(await page.getByRole('button',{name:/Start game/}).isEnabled(),true);assert.equal((await page.locator('body').evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1)),true);
+ await action(page,page.getByRole('button',{name:/Start game/}));let iterations=0,reviews=0,humanPlays=0,reloadedDeal=false,reloadedBot=false,reconnected=false,reloadedReview=false,firstDeal=true;const serverDealCounts=[];
+ while(iterations++<5000){game=await read(page,id);if(game.phase==='complete')break;
+  if(game.phase==='shuffle'){await setState(id,'$.deadline',1);continue;}
+  if(game.phase==='deal'){
+   if(firstDeal){if(serverDealCounts.at(-1)!==game.hand.length)serverDealCounts.push(game.hand.length);if(!reloadedDeal&&game.hand.length>=2){const before={handId:game.handId,hand:[...game.hand]};await page.reload();await page.locator('.game-shell').waitFor();const after=await read(page,id);assert.equal(after.handId,before.handId);assert.deepEqual(after.hand,before.hand);reloadedDeal=true;}if(game.hand.length<4){await sleep(120);continue;}const counts=await page.evaluate(()=>window.__solo.dealCounts);assert(serverDealCounts.includes(0)&&serverDealCounts.includes(2)&&serverDealCounts.includes(4),`authoritative deal steps ${serverDealCounts}`);assert(counts.includes(2)&&counts.includes(4),`visible deal steps ${counts}`);firstDeal=false;}else await setState(id,'$.deadline',1);continue;
+  }
+  if(game.phase==='collect'){await setState(id,'$.deadline',1);continue;}
+  if(game.phase==='count'){reviews++;await page.locator('.counting-panel').waitFor();assert.equal(game.deadline,null);assert.equal(game.reviewDismissed,false);if(!reloadedReview){const reviewId=game.reviewId,scores=[...game.scores];await page.reload();await page.locator('.counting-panel').waitFor();const restored=await read(page,id);assert.equal(restored.reviewId,reviewId);assert.deepEqual(restored.scores,scores);assert.equal(restored.deadline,null);reloadedReview=true;await page.screenshot({path:`${out}/${players}-review-${mobile?'dark-mobile':'light-desktop'}.png`,fullPage:true});}await action(page,page.getByRole('button',{name:/Continue \/ Close results/}));const gated=await read(page,id);assert(gated.deadline-gated.serverTime>4000);await setState(id,'$.deadline',1);continue;}
+  if(game.actor===game.mySeat){if(game.phase==='cut')await action(page,page.getByRole('button',{name:/Leave deck as-is/}));else if(game.phase==='trump1'||game.phase==='trump2')await action(page,page.getByRole('button',{name:/Play (clubs|diamonds|hearts|spades)/}).first());else if(game.phase==='play'){await action(page,page.locator('.hand-card.legal:enabled').first());humanPlays++;}else throw new Error(`Unknown human phase ${game.phase}`);continue;}
+  if(!reconnected){await context.setOffline(true);await sleep(1400);await context.setOffline(false);await waitState(page,id,state=>state.tableReady,'test owner reconnect');reconnected=true;continue;}
+  if(!reloadedBot){const before={phase:game.phase,actor:game.actor,handId:game.handId,trick:game.trick.length};await page.reload();await page.locator('.game-shell').waitFor();const after=await read(page,id);assert.deepEqual({phase:after.phase,actor:after.actor,handId:after.handId,trick:after.trick.length},before);reloadedBot=true;}
+  await setState(id,'$.botDueAt',1);await sleep(80);
+ }
+ assert(iterations<5000,'solo match did not finish');game=await read(page,id);assert.equal(game.phase,'complete');assert.ok(game.scores.some(score=>score>=7));assert.ok(reviews>=4);assert.ok(humanPlays>=4);const animation=await page.evaluate(()=>window.__solo);assert(animation.botFlights>0,'No bot card-flight DOM was observed.');const matchId=game.matchId;await action(page,page.getByRole('button',{name:/Deal a rematch/}));const rematch=await read(page,id);assert.notEqual(rematch.matchId,matchId);assert.deepEqual(rematch.scores,[0,0]);assert.equal(rematch.seats.filter(seat=>seat.bot).length,players-1);await action(page,page.getByRole('button',{name:/Leave game/}));await page.locator('.lobby').waitFor();assert.equal((await fixture.db.prepare('SELECT COUNT(*) AS n FROM rooms WHERE id=?').bind(id).first()).n,0);assert.equal(errors.length,0,errors.join('; '));reports.push({players,mode:'test',realWorkerAndD1:true,completeMatch:true,rematch:true,reviewHeldAndReloaded:reloadedReview,midDealReload:reloadedDeal,midBotReload:reloadedBot,reconnectWithinGrace:reconnected,botCardFlights:animation.botFlights,humanCardPlays:humanPlays,reviewedHands:reviews,viewport:mobile?'mobile-dark':'desktop-light',seconds:Math.round((Date.now()-started)/1000)});console.log(JSON.stringify(reports.at(-1)));await context.close();
+}
+
+try{for(const players of [4,6])await run(players);await writeFile(`${out}/results.json`,JSON.stringify(reports,null,2)+'\n');}catch(error){await writeFile(`${out}/failure.txt`,String(error?.stack||error));throw error;}finally{await browser.close();await fixture.mf.dispose();await rm(fixture.storage,{recursive:true,force:true});}

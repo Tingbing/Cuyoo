@@ -1,4 +1,16 @@
-# Cuyoo confirmed-rules update — checkpoint
+# Cuyoo implementation checkpoint
+
+## Solo test-game update
+
+Branch `codex/solo-test-game`, based on canonical `main` at `110bdbfe8b7cc451eaf1ee222bb6342978dec7a9`, adds one focused practice mode without changing ordinary multiplayer.
+
+- The existing four/six seat selector now has a secondary **Test game** action. It creates one private, deterministic room for the current device and fills remaining seats with unique `BOT` occupants.
+- Bots use the same authoritative cut, proposal, card-play, review and scoring transitions as humans. Their random action delay is persisted at 400–800ms, legal choices come from the engine's existing validators, and request/reload reconciliation resumes a due bot action exactly once.
+- Test rooms never enter the public lobby and reject joins, reads and actions from other sessions. Public state identifies bot seats but never exposes bot or opponent hands. The human alone starts, dismisses review/rematches, and remains the only reconnectable occupant.
+- Leaving deletes the synthetic room and clears membership atomically. If the owner exceeds the ordinary reconnect grace, the room becomes abandoned and stops scheduling bots; abandoned test rooms are eligible for one-hour cleanup.
+- Ordinary create/join/start/leave, human presence, replacement seats, room retention and match behavior remain on the existing paths.
+
+Validation on the implementation source: 24 rules fixtures pass; nine real Workers/D1 integration subtests pass; TypeScript, lint and production build pass. The production-build Chromium runner completed full four- and six-player solo matches to seven, opened rematches, exercised mid-deal/mid-bot/review reload and reconnect, and observed 336/1,061 bot card flights with 72/120 human plays across 18/30 reviewed hands. The four-player run used desktop/light; the six-player run used narrow mobile/dark. No uncaught page errors were observed. Deployment remains pending the implementation PR merge and the existing Sites source-mirror workflow.
 
 Canonical source: https://github.com/Tingbing/Cuyoo. Isolated branch: `codex/gameplay-animations-replacements`, based on the existing deployed implementation at `420cdfdd28d6e6aa244ea7b83867e3efd11c39ab`. Main was initialization-only; the existing implementation was in unmerged PR #1. No Wiffle repository or Supabase data was touched.
 
