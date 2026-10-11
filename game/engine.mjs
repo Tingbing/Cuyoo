@@ -27,11 +27,11 @@ export function advance(g,now){if(!g.deadline||now<g.deadline)return false;
  else return false;return true;
 }
 export function action(g,session,a,now,connected=()=>true){
- const seat=g.seats.findIndex(s=>s.id===session);need(seat>=0,'You are not seated at this table.',403);
+ const seat=g.seats.findIndex(s=>s.id===session);need(seat>=0&&!g.seats[seat].left,'You are not seated at this table.',403);
  need(a.matchId===g.matchId&&a.handId===g.handId,'This hand changed. Resync and try again.',409);
  if(a.type==='start'){need(g.phase==='waiting','This match has already started.',409);need(g.host===session,'Only the host can start.',403);need(g.seats.length===g.n&&g.seats.every(s=>connected(s.id)),'Wait for every seat to connect.');g.matchId=crypto.randomUUID();g.dealer=randomInt(g.n);nextHand(g,now);return;}
- if(a.type==='rematch'){need(g.phase==='complete','Finish this match first.');need(g.host===session,'Only the host can offer a rematch.',403);need(g.seats.every(s=>connected(s.id)),'Wait for everyone to reconnect.');g.matchId=crypto.randomUUID();g.scores=[0,0];g.bonus=0;g.history=[];g.matchWinner=-1;g.dealer=randomInt(g.n);nextHand(g,now);return;}
- if(a.type==='leave'){need(g.phase==='waiting'||g.phase==='complete','Your seat stays reserved during play. Reconnect on this device.');g.seats.splice(seat,1);if(g.host===session)g.host=g.seats[0]?.id??null;event(g,'left',now,{name:g.seats[seat]?.name??'',hostName:g.seats.find(s=>s.id===g.host)?.name??null});return;}
+ if(a.type==='rematch'){need(g.phase==='complete','Finish this match first.');need(g.host===session,'Only the host can offer a rematch.',403);need(g.seats.length===g.n&&g.seats.every(s=>!s.left&&connected(s.id)),'A rematch needs every original player. Create a new table if someone left.');g.matchId=crypto.randomUUID();g.scores=[0,0];g.bonus=0;g.history=[];g.matchWinner=-1;g.dealer=randomInt(g.n);nextHand(g,now);return;}
+ if(a.type==='leave'){need(g.phase==='waiting'||g.phase==='complete','Your seat stays reserved during play. Reconnect on this device.');const departed=g.seats[seat].name;if(g.phase==='waiting')g.seats.splice(seat,1);else g.seats[seat].left=true;if(g.host===session)g.host=g.seats.find(s=>!s.left)?.id??null;event(g,'left',now,{name:departed,hostName:g.seats.find(s=>s.id===g.host)?.name??null});return;}
  need(seat===g.actor,'It is another player’s turn.',403);
  if(a.type==='cut'||a.type==='uncut'){need(g.phase==='cut','The deck is already finalized.',409);if(a.type==='cut')g.deck=cut(g.deck,a.gap);g.cutIndex=a.type==='cut'?a.gap:null;const d=deal(g.deck,g.n,g.dealer);g.hands=d.hands;g.proposed=d.proposed;g.fallback=g.n===4?d.remaining.at(-1):null;phase(g,'deal',now,1000);return;}
  if(a.type==='pass'||a.type==='trump'){need(['trump1','trump2'].includes(g.phase),'Trump decisions have ended.',409);

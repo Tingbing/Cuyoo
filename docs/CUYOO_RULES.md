@@ -53,4 +53,4 @@ Scores are saved once atomically before count presentation. Refreshing or reconn
 
 Usernames are display labels, 2–24 characters, case-insensitively unique within a table. Anonymous device identity is an HttpOnly cookie, not a username. One device has one active seat. A second tab observes and becomes controlling only after the first tab’s lease expires.
 
-A lobby player can leave; host transfers to the first remaining seat. During play disconnected seats/hands remain reserved. No replacement, automated play or forced cards: a missing player’s turn waits for them. Reopen on the same browser/device to resume. Completed matches may be left or rematched by the host.
+A lobby player can leave; host transfers to the first remaining seat. During play disconnected seats/hands remain reserved. No replacement, automated play or forced cards: a missing player’s turn waits for them. Reopen on the same browser/device to resume. Completed matches may be left; departed seats retain their original team positions in the final table. A host rematch requires every original player still seated and connected. If someone has left, remaining players can leave and create a new game.

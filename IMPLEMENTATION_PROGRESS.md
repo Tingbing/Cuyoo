@@ -22,3 +22,7 @@ HTTPS URL: https://cuyoo-table.warm-ghost-4468.chatgpt.site. Version 1 deployed 
 Desktop cloud-browser inspection succeeded: live lobby, create, seats/teams, manual disabled start, reload restoration, second-tab read-only enforcement and leave flow. Screenshot and exact limitations: docs/VALIDATION.md. Required 4/6 independent browser contexts and mobile animation checks remain outstanding; no claim of complete browser validation.
 
 Latest fixes: an emptied waiting room gives the next joining participant host ownership; independent HTTPS-test cookie jars retain gateway/device cookies separately; integration driver consistently chooses one calling team to prevent artificially long random penalty walks. The full local integration suite passes after the fixes. Build passes. Live HTTPS complete-match checks remain running.
+
+Final review also prevents a rematch after a player leaves: completed-match departures retain fixed team positions, and rematches require every original seat connected. A new independent regression fixture verifies this. Heartbeats now renew at most once per five seconds to reduce background database writes.
+
+Live four-player HTTPS result: 11 hands, 176 card plays, elapsed 393 seconds including all network assertions; final score 7 to -1; rematch reset verified. Synthetic room 04d1a94a-3afa-4b8e-a211-aa2a812405e6. Six-player match remains in progress.

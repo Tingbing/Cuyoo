@@ -26,7 +26,7 @@ export async function handle(request,env){let extra={};try{
  return reply({name:session.name,roomId:session.active_room},200,extra);}
  need(session,'Your device session expired. Reload to reconnect.',401);
  // A short database-backed controller lease makes other tabs read-only.
- await db.prepare('UPDATE sessions SET seen=?,controller=?,lease=? WHERE id=? AND (controller=? OR lease<? OR controller IS NULL)').bind(now,tab,now,session.id,tab,now-15000).run();
+ await db.prepare('UPDATE sessions SET seen=?,controller=?,lease=? WHERE id=? AND (controller=? OR lease<? OR controller IS NULL) AND (controller IS NULL OR controller!=? OR lease<?)').bind(now,tab,now,session.id,tab,now-15000,tab,now-5000).run();
  session=await db.prepare('SELECT * FROM sessions WHERE id=?').bind(session.id).first();const readOnly=session.controller!==tab;
  if(request.method==='POST'){
  need(!readOnly,'Another tab controls this device. Close it and wait 15 seconds.',409);
@@ -36,7 +36,7 @@ export async function handle(request,env){let extra={};try{
  await db.prepare(`DELETE FROM rooms WHERE ((status='waiting' AND updated<?) OR (status!='waiting' AND updated<?)) AND NOT EXISTS(SELECT 1 FROM sessions WHERE active_room=rooms.id AND seen>?)`).bind(now-86400000,now-604800000,now-120000).run();
  await db.prepare('UPDATE sessions SET active_room=NULL WHERE active_room IS NOT NULL AND NOT EXISTS(SELECT 1 FROM rooms WHERE id=active_room)').run();
  const list=await db.prepare('SELECT id,name,capacity,status,state FROM rooms ORDER BY updated DESC LIMIT 80').all();
- return reply({name:session.name,roomId:session.active_room,readOnly,rooms:list.results.map(r=>{const g=JSON.parse(r.state);return {id:r.id,name:r.name,capacity:r.capacity,status:r.status,count:g.seats.length,host:g.seats.find(s=>s.id===g.host)?.name??'Empty table'};})});}
+ return reply({name:session.name,roomId:session.active_room,readOnly,rooms:list.results.map(r=>{const g=JSON.parse(r.state);return {id:r.id,name:r.name,capacity:r.capacity,status:r.status,count:g.seats.filter(s=>!s.left).length,host:g.seats.find(s=>s.id===g.host)?.name??'Empty table'};})});}
  if(path==='/api/rooms'&&request.method==='POST'){
  need(!session.active_room,'You already have a seat. Resume or leave it first.',409);need(input.capacity===4||input.capacity===6,'Choose four or six players.');name(session.name);const existing=await db.prepare('SELECT COUNT(*) AS n FROM rooms WHERE updated>?').bind(now-86400000).first();need(existing.n<80,'The table list is full. Try later.',429);
  const recent=await db.prepare("SELECT COUNT(*) AS n FROM rooms WHERE json_extract(state,'$.host')=? AND updated>?").bind(session.id,now-3600000).first();need(recent.n<8,'Please use an existing table for now.',429);

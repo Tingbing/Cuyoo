@@ -29,7 +29,7 @@ Browser UI coverage is a separate requirement from API sessions. Neither pure ru
 
 HttpOnly Secure SameSite=Lax cookie contains a 256-bit random device credential; only its SHA-256 hash is stored. APIs never return it, seat identity hashes, the undealt deck, or other hands. The host has no extra hand access. Origin checks and JSON-only POSTs prevent cross-origin move submission. Session action limits: 180/minute; room cap 80; at most 8 recent host-owned tables/hour. Names use text rendering. No SQL injection via user-supplied fields; every value is bound.
 
-A controller lease makes simultaneous tabs read-only. It is refreshed on successful API requests and expires after 15 seconds without the controlling tab. Connection display expires after 20 seconds. Membership is independent of presence.
+A controller lease makes simultaneous tabs read-only. It is renewed at most every 5 seconds by successful API requests and expires after 15 seconds without the controlling tab. Connection display expires after 20 seconds. Membership is independent of presence.
 
 Server timestamps control shuffle/deal/collection/count transitions. The first request after a deadline performs the transition with atomic compare-and-swap. If all browsers are closed, presentation pauses in storage and resumes on the next request. Worker restarts require no recovery jobs. No client animation acknowledgement drives results.
 
