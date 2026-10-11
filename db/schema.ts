@@ -9,6 +9,8 @@ export const sessions = sqliteTable('sessions', {
 export const rooms = sqliteTable('rooms', {
   id: text('id').primaryKey(), name: text('name').notNull(),
   capacity: integer('capacity').notNull(), status: text('status').notNull(),
-  state: text('state').notNull(), version: integer('version').notNull(),
+  state: text('state').notNull(), preV2State:text('pre_v2_state'), version: integer('version').notNull(),
   mutation: text('mutation').notNull(), updated: integer('updated').notNull(),
 }, t => [index('room_updated').on(t.updated)]);
+
+export const connections = sqliteTable('connections', {id:text('id').primaryKey(),session:text('session').notNull(),expires:integer('expires').notNull()},t=>[index('connection_session').on(t.session)]);

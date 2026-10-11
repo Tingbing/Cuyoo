@@ -14,13 +14,13 @@ try{
  const created=await action(pages[0],pages[0].getByRole('button',{name:/Create game/}),'/api/rooms'),id=created.roomId;
  await action(pages[1],pages[1].locator('.room-row').filter({hasText:title}).getByRole('button',{name:/Join/}),`/api/rooms/${id}/join`);
  let g=(await read(pages[0],id)).body;assert.equal(g.phase,'waiting');assert.equal(g.seats.length,2);assert(g.seats[0].host);assert(await pages[0].getByRole('button',{name:/Start game/}).isDisabled());
- await action(pages[0],pages[0].getByRole('button',{name:/Leave table/}),`/api/rooms/${id}/action`);
+ await action(pages[0],pages[0].getByRole('button',{name:/Leave game/}),`/api/rooms/${id}/action`);
  assert.equal((await read(pages[0],id)).status,403);g=(await read(pages[1],id)).body;assert(g.isHost);assert.equal(g.seats.length,1);assert.equal(g.mySeat,0);
  await pages[1].getByRole('button',{name:/Start game/}).waitFor();assert(await pages[1].getByRole('button',{name:/Start game/}).isDisabled());
  await mkdir('docs/browser-evidence',{recursive:true});await pages[1].screenshot({path:'docs/browser-evidence/host-transfer.png',fullPage:true});
- await action(pages[1],pages[1].getByRole('button',{name:/Leave table/}),`/api/rooms/${id}/action`);
+ await action(pages[1],pages[1].getByRole('button',{name:/Leave game/}),`/api/rooms/${id}/action`);
  await action(pages[2],pages[2].locator('.room-row').filter({hasText:title}).getByRole('button',{name:/Join/}),`/api/rooms/${id}/join`);
  g=(await read(pages[2],id)).body;assert(g.isHost);assert.equal(g.seats.length,1);assert.equal(g.mySeat,0);
- await action(pages[2],pages[2].getByRole('button',{name:/Leave table/}),`/api/rooms/${id}/action`);
+ await action(pages[2],pages[2].getByRole('button',{name:/Leave game/}),`/api/rooms/${id}/action`);
  const report={roomId:id,hostTransfer:true,emptyLobbyNextHost:true,departedReadRejected:true,allSyntheticSeatsLeft:true,verified:true};await writeFile('docs/browser-evidence/lobby-result.json',JSON.stringify(report,null,2)+'\n');console.log(JSON.stringify(report));
 }finally{for(const c of contexts)await c.close();await browser.close();}

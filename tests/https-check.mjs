@@ -18,10 +18,11 @@ for(const n of [4,6]){
  const views=await Promise.all(clients.map(c=>api(c,'rooms/'+id)));g=views[0];if(g.phase==='complete')break;
  // Requests can span a timestamp transition; compare only snapshots with the same version.
  for(const v of views){assert.ok(!('deck' in v)&&!('hands' in v)&&!('receipts' in v));assert.ok(v.seats.every(s=>!('id' in s)));if(v.version===g.version){assert.deepEqual(v.scores,g.scores);assert.deepEqual(v.trick,g.trick);assert.equal(v.actor,g.actor);}}
+ if(g.phase==='count'&&g.deadline===null){await act(clients[0],id,g,'dismiss',{reviewId:g.reviewId});await wait(180);continue;}
  if(['shuffle','deal','collect','count'].includes(g.phase)){await wait(180);continue;}
  const actor=clients[g.actor],v=views[g.actor];if(v.version!==g.version)continue;
  try{if(g.phase==='cut')await act(actor,id,v,'cut',{gap:12});
- else if(['trump1','trump2'].includes(g.phase)){if(g.actor%2===1)await act(actor,id,v,'pass');else await act(actor,id,v,'trump',{suit:g.phase==='trump1'?g.proposed.split(':')[0]:['clubs','diamonds','hearts','spades'].find(s=>s!==g.proposed.split(':')[0])});}
+ else if(['trump1','trump2'].includes(g.phase)){if(g.actor%2===1)await act(actor,id,v,'pass');else await act(actor,id,v,'trump',{suit:g.proposed.split(':')[0]});}
  else if(g.phase==='play'){assert.ok(v.legal.length);if(checks++===0){const other=clients[(g.actor+1)%n];await act(other,id,v,'play',{card:v.legal[0]},403);const alternate={...actor,tab:crypto.randomUUID()};assert.equal((await api(alternate,'rooms/'+id)).readOnly,true);await act(alternate,id,v,'play',{card:v.legal[0]},409);}
  await act(actor,id,v,'play',{card:v.legal[0]});moves++;}else assert.fail('Unknown phase '+g.phase);}catch(e){if(!e.message.includes('409'))throw e;}
  }

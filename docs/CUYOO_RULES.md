@@ -1,56 +1,49 @@
-# Wisconsin Cuyoo — implemented rules
+# Wisconsin Cuyoo — confirmed rules
 
-## Table and turn order
+Four or six players form alternating fixed teams (even seats A, odd B). Usernames are anonymous display labels; the server cookie authorizes the current occupant. The host manually starts a full, connected new table. Match target is seven; negative scores and awards beyond seven are preserved.
 
-Four or six players form two teams in alternating fixed seats: even seat indices Team A, odd Team B. The host manually starts only with every seat filled and connected. A match begins at 0–0; the first team to reach or exceed 7 game points wins. Negative scores are allowed.
+Initial dealer is securely random only at match/rematch start. Cutter is right of dealer; trump decisions and first trick lead start left of dealer. Each completed or passed attempt advances the dealer clockwise exactly once. Later trick winners lead.
 
-Initial dealer is uniformly random on the server. Clockwise from dealer D, the cutter is (D−1+N) mod N; first trump actor and first trick leader are (D+1) mod N. Winners lead later tricks. After each completed, scored or tied hand, dealer advances one seat clockwise.
+## Cards, cut, and packets
 
-## Shuffle, cut and deal
+The 24-card deck contains 9, 10, J, Q, K, A in four suits. Shuffle is cryptographic Fisher–Yates; cutting rotates at a whole gap 1–23. Deal two cards clockwise to each seat, then two more clockwise, preserving actual allocation order. Each 360ms packet has a server delivery time after a brief 600ms table synchronization prelude. Private projections expose zero, two, then four own cards. Other hands and unused deck stay private. Reduced motion preserves the same timings/order.
 
-Exactly 24 cards: 9, 10, J, Q, K, A in clubs, diamonds, hearts, spades. Unbiased cryptographic Fisher–Yates shuffle. The player right of dealer leaves the deck unchanged or selects a gap 1–23. Cutting rotates deck[k:] + deck[:k], with no subsequent shuffle.
+Four players receive 16 cards. First unused card proposes trump. After all four pass, the next unused card proposes trump in another complete clockwise round, even if its suit is the same. After both rounds pass, advance dealer, reshuffle and cut a new hand; no automatic caller/trump.
 
-Deal clockwise starting left of dealer in two-card packets, twice around: four cards each. No trump choice adds, removes or swaps cards.
+Six players receive all 24 cards. Dealer's last dealt card proposes trump and stays in that hand. After one complete all-pass round, advance dealer and redeal. There is no second suit-choice round. Accepting either eligible proposal ends decisions immediately and records the caller by stable seat/team.
 
-With four players, eight cards remain undealt. The top undealt card proposes trump; if everyone passes, the bottom undealt card sets trump automatically, with no caller. The undealt cards never contribute to captured-card scoring.
+## Legal play and winners
 
-With six players, all cards are dealt. Dealer’s last dealt card proposes trump and remains in the dealer’s hand, playable and visible to all as the sole private-hand exception.
+A > K > Q > J > 10 > 9. Jacks keep their printed suit; no bowers or obligation to overtrump.
 
-## Trump decisions
+If holding the suit led, follow it OR play trump. If void in the suit led, ANY owned card is legal, even while holding trump. Trump led must be followed if held. A leader may lead any owned card. Every input uses the same server action; the server independently validates ownership, phase, turn, occupancy, version and hand IDs.
 
-Starting left of dealer, each player passes or plays the proposed suit. First acceptance immediately settles trump and identifies the caller’s team. If all six pass, a second round starts left of dealer and permits only the other three suits.
+Highest trump wins; otherwise highest card of the led suit. Four tricks per played hand. Center faces stay bright, and every trump card has a gold outline distinct from the winning-card glow.
 
-**Unconfirmed default 1:** if all six also pass in round two, reshuffle and redeal with the same dealer; no score or caller penalty. This is isolated in `game/engine.mjs`, with `DEFAULTS.sixAllPass` documenting the selected policy.
+## Points and review
 
-## Four tricks
-
-Cards rank A > K > Q > J > 10 > 9 within their suit. Jacks never change suits; there are no bowers.
-
-A player may follow the led suit OR play trump, even while holding the led suit. If they cannot follow but hold trump, they must trump. Only when holding neither the led suit nor trump may they discard any other suit. When trump is led, follow trump if held; otherwise discard freely. No requirement to overtrump or play higher.
-
-Highest trump wins; if no trump was played, highest card of the originally led suit wins. An off-suit non-trump ace cannot win. Each trick has N played cards. Each hand has exactly four tricks.
-
-## Card points and match points
-
-| Rank | Captured card points |
+| Rank | Captured points |
 | --- | ---: |
 | Ace | 4 |
 | King | 3 |
 | Queen | 2 |
 | Jack | 1 |
-| 10 | 0 |
-| 9 | 0 |
+| 10 / 9 | 0 |
 
-The team with more captured card points wins one game point plus any pending tie bonus. A losing caller’s team also loses one game point. Automatic four-player trump has no caller, so no penalty. Six-player hands total 40 card points; four-player hands count only the 16 dealt cards, with no fixed 21-point threshold. No sweep bonus.
+More captured card points wins +1, or +2 with the single shared pending bonus. A losing caller loses exactly ONE point. A tie changes no scores/penalty and sets the same bonus. Passed attempts change no scores and also set it. Repeated ties/passes never compound: the next decisive win is always TWO maximum and clears the bonus. Six to eight wins the match. Rematch clears scores/bonus/history and selects a fresh random dealer.
 
-A tie awards no game point and no caller penalty, and carries a +1 bonus to the next decisive hand.
+Scoring is saved once before durable result review. Everyone keeps their own results until tapping/swiping/closing them. Nonhost dismissal affects only that occupant. The CURRENT host's accepted dismissal sets a single server deadline exactly 5000ms later. Repeat requests, reloads and host transfer do not extend it. At expiry, all panels close; a vacancy pauses the next hand without rescoring/restarting the gate. A final winning review goes to match complete instead of another deal.
 
-**Unconfirmed default 2:** successive ties retain exactly one pending bonus, rather than accumulating unlimited bonuses. The next decisive hand clears it. `DEFAULTS.repeatedTies` documents this isolated scoring policy.
+## Leave, reconnect and replacement
 
-Scores are saved once atomically before count presentation. Refreshing or reconnecting cannot award a hand again. A rematch resets scores, tie bonus, hand history and match IDs and selects a fresh random dealer (the same seat may randomly be selected again).
+Stable seats own team, cards and game responsibility. Occupants own identity, name, connection and an increasing epoch. Leave releases the exact seat immediately during any phase; it preserves cards, contributions, scores, bonus, actor, dealer and review/deal IDs. A new device can claim an advertised vacancy, inherit the remaining private hand, and resume automatically once the table is ready. Concurrent claims admit one occupant; former occupants cannot read or play that seat.
 
-## Membership and disconnection
+A server-verified WebSocket connection keeps live background tabs present. The last socket closing marks observed loss; absence of heartbeats is detected after six seconds. From observed loss, reserve for TEN seconds. Reconnect before expiry cancels the deadline; at/after expiry normal admission is required. One tab closing does not evict a device with another live connection. Server-request reconciliation releases due seats atomically and survives restarts.
 
-Usernames are display labels, 2–24 characters, case-insensitively unique within a table. Anonymous device identity is an HttpOnly cookie, not a username. One device has one active seat. A second tab observes and becomes controlling only after the first tab’s lease expires.
+Gameplay pauses while any required seat is vacant/reconnecting. Presentation may finish, and a started review deadline can expire. On host release, transfer to the first connected occupied seat; if none exists, the first admitted/returning connected occupant becomes host. Preserve any review deadline. All-vacant games retain ordinary seven-day retention; unattended waiting tables retain 24 hours.
 
-A lobby player can leave; host transfers to the first remaining seat. During play disconnected seats/hands remain reserved. No replacement, automated play or forced cards: a missing player’s turn waits for them. Reopen on the same browser/device to resume. Completed matches may be left; departed seats retain their original team positions in the final table. A host rematch requires every original player still seated and connected. If someone has left, remaining players can leave and create a new game.
+## Controls and display
+
+Tap/click/Enter play remains available. Drag/swipe a legal card upward at least 48px (6% viewport height, capped at 80px), with upward movement at least 1.25 times sideways movement. Short/sideways/canceled drags return without mutation. Pending actions block duplicates; rejection restores the unchanged hand via authoritative resync. Escape or the Continue control closes review; review swipes are separate from card play.
+
+The main-page light/dark toggle stores a device preference, applies before first paint, and respects the system preference when no explicit choice is saved. Other devices keep independent themes. Local-seat duplicate backs and visible hand headings are removed; other seats retain backs.
