@@ -4,7 +4,7 @@
 
 All application source, tests and migrations belong to `Tingbing/Cuyoo`, branch `codex/gameplay-animations-replacements` (merged to `main` after validation). Sites uses a deployment-source mirror to publish the same source. This is a standalone application with a dedicated D1 database; it has no connection to the Wiffle Ball app or its Supabase project. No paid plans or purchases were enabled.
 
-Use Node 22.13+ and the version of pnpm pinned in package.json. `bash scripts/install-pnpm.sh` installs dependencies with the frozen lockfile. `npm run test`, `npm run typecheck`, `npm run build` perform the supported checks. Production builds use the supplied Sites/Vinext integration. The UI and API share one origin; no CORS or secret environment variables are needed.
+Use Node 22.13+ and the version of pnpm pinned in package.json. `bash scripts/install-pnpm.sh` installs dependencies with the frozen lockfile. `npm run test`, `npm run typecheck`, `npm run build` perform the supported checks. Production builds use the supplied Sites/Vinext integration. The UI and API share one origin; no CORS configuration is needed. Normal gameplay needs no secret. The one-time table reset uses a temporary secret `CUYOO_MAINTENANCE_TOKEN`; set it only for the guarded reset and remove it after the zero-count verification.
 
 `.openai/hosting.json` contains the Site identity and logical `DB` D1 binding. Sites provisions the dedicated binding and applies the versioned `drizzle/` migrations before uploading the Worker. Runtime schema creation is prohibited. For standalone Cloudflare use, bind your own free-plan D1 database to `DB` and configure its real database ID in Wrangler; the starter ID is only for local emulation, never a live database target.
 
@@ -14,7 +14,7 @@ Solo mode needs no schema migration, new service, secret or paid resource. It st
 
 The browser never drives a bot or receives a bot credential. An owner-authorized request loads the room, reconciles due server time, selects one random action from the engine's legal set and commits it through the same optimistic room mutation used by human play. A pending bot turn records its identity and 400–800ms due time before execution. Restarts, reloads and concurrent requests therefore resume it safely instead of losing or duplicating a move. Scheduling pauses whenever the human must act, while the human reviews a completed hand, or when the room is no longer playable.
 
-Test rooms are excluded from lobby queries and reject join attempts. The human's normal reconnect grace remains available; expiry marks the test room abandoned and prevents further bot scheduling. Explicit Leave deletes the owned room and session membership in one transaction. Opportunistic cleanup removes abandoned test rooms after one hour. Ordinary rooms retain their existing 24-hour/seven-day retention rules.
+Test rooms are excluded from lobby queries and reject join attempts. The human's normal reconnect grace remains available. Explicit Leave deletes the owned room and session membership in one transaction. The same six-hour accepted-human-activity deadline applies to test and ordinary rooms; bot work never extends it, and expiry prevents further scheduling before bounded cleanup removes the room.
 
 ## Local D1 and verification
 
@@ -45,7 +45,13 @@ Server timestamps control shuffle/deal/collection and result-review expiry. The 
 
 All seats remain fixed, including empty waiting seats. Occupancy epochs invalidate stale UI actions. Current cookie membership is checked on every private view/mutation. Replacement transfers no session credentials: the new session receives its own authorized projection of the preserved seat. Historical accepted card events and trick entries retain the playing occupant's name.
 
-Rooms retain the original policy: unattended waiting tables expire after 24 hours, other abandoned games after seven days, with connected members protecting retention. Lobby metadata reveals only occupancy and names, never protected cards. Connection rows older than their lease plus a minute are cleaned when a socket opens.
+Every room has `last_human_activity_at`, `expires_at`, and `activity_version`. Accepted human room use advances the deadline exactly six hours from authoritative server time. Passive polling, presence, bot actions, timer reconciliation, cleanup, rejected actions, and duplicate receipts do not. Lobby queries filter `expires_at <= serverNow` immediately and run bounded cleanup. Direct room access performs the same cutoff check and conditionally deletes only if the stored deadline is still the one inspected. Lobby metadata reveals only occupancy, names, and the public expiry deadline, never protected cards. Connection rows older than their lease plus a minute are cleaned when a socket opens.
+
+## Version 3 migration and authorized reset
+
+Apply immutable migration `0002_quick_magus.sql` once before the version-3 Worker. It adds activity metadata, backfills legacy deadlines from `state.created` or persisted `rooms.updated`, and creates the private reset/control tables. Migration time is deliberately not considered human activity.
+
+The reset endpoint is `/api/internal/table-reset`. It is same-origin, bearer-secret protected, and intentionally unavailable without `CUYOO_MAINTENANCE_TOKEN`. Use a fresh reset UUID and phases `begin`, `execute` with the exact guarded room count, then `finish`. `begin` blocks creates, joins, resumes, and actions. `execute` snapshots room JSON and active memberships inside the dedicated D1, clears connections/memberships, and deletes rooms. `finish` restores availability only when the authoritative count is zero. Keep recovery snapshots private in D1 and never copy hands/session identifiers into issues, logs, GitHub, or public artifacts. Remove the temporary secret and redeploy the same checked version after completion.
 
 ## Version 2 upgrade and ordering
 
