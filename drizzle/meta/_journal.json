@@ -15,6 +15,13 @@
       "when": 1791741301307,
       "tag": "0001_occupancy_review_v2",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791750554830,
+      "tag": "0002_quick_magus",
+      "breakpoints": true
     }
   ]
 }

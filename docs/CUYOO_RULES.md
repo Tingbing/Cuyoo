@@ -1,6 +1,6 @@
 # Wisconsin Cuyoo — confirmed rules
 
-Four or six players form alternating fixed teams (even seats A, odd B). Usernames are anonymous display labels; the server cookie authorizes the current occupant. The host manually starts a full, connected new table. Match target is seven; negative scores and awards beyond seven are preserved.
+Four or six players choose Team A or Team B in the waiting lobby. New ordinary participants begin unassigned; each team holds exactly half the selected player count. The verified host may start only when every required participant is connected and the chosen teams are full and balanced. Start preserves join order within each chosen team and maps them into alternating fixed game seats (A-B-A-B or A-B-A-B-A-B). Usernames are anonymous display labels; the server cookie authorizes the current occupant. Match target is seven; negative scores and awards beyond seven are preserved.
 
 Initial dealer is securely random only at match/rematch start. Cutter is right of dealer; trump decisions and first trick lead start left of dealer. Each completed or passed attempt advances the dealer clockwise exactly once. Later trick winners lead.
 
@@ -40,7 +40,15 @@ Stable seats own team, cards and game responsibility. Occupants own identity, na
 
 A server-verified WebSocket connection keeps live background tabs present. The last socket closing marks observed loss; absence of heartbeats is detected after six seconds. From observed loss, reserve for TEN seconds. Reconnect before expiry cancels the deadline; at/after expiry normal admission is required. One tab closing does not evict a device with another live connection. Server-request reconciliation releases due seats atomically and survives restarts.
 
-Gameplay pauses while any required seat is vacant/reconnecting. Presentation may finish, and a started review deadline can expire. On host release, transfer to the first connected occupied seat; if none exists, the first admitted/returning connected occupant becomes host. Preserve any review deadline. All-vacant games retain ordinary seven-day retention; unattended waiting tables retain 24 hours.
+Gameplay pauses while any required seat is vacant/reconnecting. Presentation may finish, and a started review deadline can expire. On host release, transfer to the first connected occupied seat; if none exists, the first admitted/returning connected occupant becomes host. Preserve any review deadline. A replacement inherits the departed fixed seat and team; team controls never reassign an active hand.
+
+## Initial-leader teammate request
+
+After trump is selected and before the first card of the hand, each other human teammate of the initial leader may send one predefined **Lead trump** request. The server derives the target from `(dealer + 1) mod N`; caller identity is irrelevant. Only the current occupant of that leader seat receives the sender name. It is advice only: it reveals no hand, changes no legal card, and does not alter bot strategy. The first accepted card or any new/redealt hand clears the request.
+
+## Six-hour table lifetime
+
+Creation and accepted meaningful human room actions set activity from authoritative server time. A table expires after six hours without such use, in waiting, active, complete, or test mode. Join/resume, team selection, game actions, result dismissal, teammate request, and rematch count. Global lobby reads, polling, presence heartbeats, bot moves, derived timers, cleanup, rejected requests, and duplicate retries do not. At the cutoff the table cannot be resumed or revived; private live room state is deleted by bounded server cleanup.
 
 ## Controls and display
 

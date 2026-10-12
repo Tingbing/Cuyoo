@@ -2,7 +2,7 @@
 
 [Play Cuyoo online](https://cuyoo-table.warm-ghost-4468.chatgpt.site/).
 
-Real multiplayer Wisconsin Cuyoo for 4 or 6 friends. Username-only entry, shared live table list, manual host start, alternating teams, animated card table, private hands, reconnectable seats and authoritative scoring to seven.
+Real multiplayer Wisconsin Cuyoo for 4 or 6 friends. Username-only entry, shared live table list, click-to-join teams, authoritative host Start, alternating game seats, private hands, reconnectable seats and scoring to seven.
 
 For a private practice match, choose four or six seats and select **Test game**. The server fills every other seat with clearly labeled bots, keeps the table out of the public lobby, and runs the normal deal, auction, trick, review, scoring and rematch rules. Only the human player's hand is revealed. Test games are intentionally single-human: nobody else can join, and leaving deletes the synthetic room immediately.
 
@@ -21,4 +21,4 @@ Device sessions are secure anonymous cookies; no email/account flow. Your userna
 
 This repository is independent of Tingbing/wiffle-ball-league and does not use its database.
 
-Enter a username, create a 4/6-player table and have friends join this same URL, or select **Test game** to practice against bots. The host starts once everyone is seated. The cutter uses the slider or leaves the deck; choose trump with Pass/Play, then tap lit legal cards. Reopen the same browser/device to reconnect.
+Enter a username, create a 4/6-player table and have friends join this same URL, then click Team A or Team B. The host starts only when every connected player has chosen and both teams are full. During the first lead, the initial leader's teammates may privately ask them to lead trump; the request is advisory and never plays or restricts a card. Tables expire after six hours without an accepted human room action. Select **Test game** to practice against bots. Reopen the same browser/device to reconnect.
