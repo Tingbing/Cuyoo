@@ -32,11 +32,11 @@ Expected stale HTTP 409s are explicitly reconciled and deliberate former-occupan
 
 ## Deployment and one-time reset
 
-- Commit / pull request: pending.
-- Preview/live version and deployment: pending.
-- Production smoke tests: pending; use only `QA-New-*` rooms and perform them before reset.
-- Reset baseline: earlier read-only inspection found 27 rooms; re-count under the maintenance guard immediately before deletion.
-- Private recovery location: pending reset ID under D1 `reset_snapshots`, `reset_room_snapshots`, and `reset_session_snapshots`; never GitHub.
-- Final authoritative room count: pending. Do not mark complete until it is zero, old IDs fail, the lobby is empty, maintenance is released, and no smoke room remains.
+- Implementation PR [#7](https://github.com/Tingbing/Cuyoo/pull/7) merged as `6be9f5292036cfaaa1d793138efe610d585beea2`. Sites first rejected version 13 at the migration gate with `SQL code did not contain a statement`; production stayed on version 12 and a read-only schema check confirmed no partial migration. The SQL normalization follow-up PR [#9](https://github.com/Tingbing/Cuyoo/pull/9) merged as `6111920ee946f65c027c5358852529f25a36ce5f`.
+- Exact Site source mirror `19759517c6d425b935268f81d42d8975f834acfb` produced version 14 (`appgprj_6acaf74b5fcc8191903fb83f348ad81d~appgver_876053387b1c819197120c25c2d93156`). Deployment `appgdep_6acc5ea9b8f881918e6cac0cd337e4ee` succeeded at the existing public URL.
+- Hosted smoke tests passed before reset. Four players used six independent contexts and 16 card plays in 136 seconds; six players used eight contexts and 24 card plays in 150 seconds. Both covered team choice/Start, opposite caller/leader teams, private lead requests, replacement, all-pass/redeal, review/host transfer, gestures, reconnect and zero page errors. Initial hosted attempts reached review but the harness allowed only 500ms for observing a server deadline after network transit; the live-only observation allowance was corrected without weakening the exact backend/local deadline assertion.
+- Initial read-only production inspection before development found 27 rooms. Version-3 request cleanup removed legacy rows already beyond the backfilled six-hour deadline. The authoritative inventory immediately before the one-time reset found 4 remaining rooms (two `count`, two `cut`), 0 active memberships, 0 connection rows, and no test rooms.
+- The guarded reset reported the same 4 rooms. Private recovery is stored only in D1 at `reset_snapshots/a6bb82c5-0f0c-424f-8ae2-6568beffa2cb`, with 4 room snapshot rows and 0 active-session snapshot rows. The reset cleared all 4, released maintenance, and an old room join returned HTTP 404.
+- Final read-only verification: **0 rooms, 0 active memberships, 0 connections, maintenance=0, lobby count=0**. The temporary `CUYOO_MAINTENANCE_TOKEN` was removed and version 14 was redeployed successfully as `appgdep_6acc604c466c81918c865033eb1abfea` with environment revision 2 and no runtime environment keys. No verification room was created after the reset.
 
-If rollout is interrupted, leave production unchanged, keep the branch/PR checkpoint, and repeat the live schema/count check before resuming. Apply `0002` before the new Worker. Do not roll back to a pre-`0002` Worker after new room activity metadata exists.
+Recovery remains a private administrative decision: inspect the reset metadata and snapshot rows in the dedicated D1 viewer. Do not copy their payloads to source control. Apply `0002` before the version-3 Worker and do not roll back to a pre-`0002` Worker.
