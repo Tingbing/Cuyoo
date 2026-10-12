@@ -31,10 +31,7 @@ CREATE TABLE `reset_snapshots` (
 ALTER TABLE `rooms` ADD `last_human_activity_at` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE `rooms` ADD `expires_at` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
 ALTER TABLE `rooms` ADD `activity_version` integer DEFAULT 0 NOT NULL;--> statement-breakpoint
-/* Legacy rooms use their authoritative state.created value. Only malformed
-   legacy rows fall back to the persisted updated timestamp; migration time is
-   deliberately never treated as human activity. */
 UPDATE `rooms`
 SET `last_human_activity_at` = coalesce(cast(json_extract(`state`, '$.created') AS integer), `updated`),
     `expires_at` = coalesce(cast(json_extract(`state`, '$.created') AS integer), `updated`) + 21600000;--> statement-breakpoint
-INSERT INTO `app_control` (`singleton`, `maintenance`) VALUES (1, 0);
+INSERT OR IGNORE INTO `app_control` (`singleton`, `maintenance`) VALUES (1, 0);
