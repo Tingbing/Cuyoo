@@ -1,5 +1,13 @@
 # Confirmed-rule update validation
 
+## Team selection, expiry, and lead request
+
+The version-3 change passes 40 Node test entries, TypeScript, ESLint, and a production build. The D1 suite uses independent sessions and covers concurrent final-slot team choices, full-team rejection preserving the prior choice, host-only atomic Start, canonical alternating seats, fixed-team replacement, accepted-versus-replayed/rejected activity, expiry at the cutoff, cleanup renewal races, private leader-only request projections, duplicate/stale request rejection, first-card races, bot rebalancing, and the guarded reset with private snapshots.
+
+Compiled production assets and the real Worker ran over local HTTPS with a disposable migrated D1. Four-player used six independent browser contexts and played 16 cards; six-player used eight contexts and played 24. Both selected teams through the UI, started balanced, verified leader-derived teammate controls/private delivery, replaced the leader without losing the current notice, exercised all-pass/redeal, two-card packet presentation, swipe/touch/keyboard, reload/reconnect, host transfer/review, and former-occupant denial. Both reported zero uncaught page errors. The solo six-player run completed a full match/rematch on a narrow dark viewport with the human choosing Team A, 52 human plays, 447 bot card flights and 13 reviewed hands. Expected stale 409 resyncs and deliberate 403 probes are not failures.
+
+The first browser attempt failed only because the harness asserted host Start before the next authoritative refresh; the corrected harness waits for the refreshed disabled state. A later request-banner assertion used `/ask you/` against the correct singular text “asks you”; this was corrected without changing delivery checks. An exact animation-node count was also made lower-bounded because React refreshes can replay a visual node while authoritative packet order remains unchanged. These are recorded harness corrections, not relabeled backend failures.
+
 ## Solo test-game validation
 
 The focused bot-mode change passed 24 engine/rules fixtures and nine real Workers/D1 integration subtests. Coverage includes unique labeled bot occupants, human-name collision handling, exact legal follow/trump/void choices, four/six all-pass redeals, human-held result review, owner reconnect expiry, duplicate concurrent creation converging on one room, lobby/join/private-view denial, inability for the human to impersonate a bot, complete matches/rematches and atomic leave deletion. TypeScript, full lint and the production build also pass.
